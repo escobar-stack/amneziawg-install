@@ -1,0 +1,58 @@
+name: Build and Release AmneziaWG Web
+
+on:
+  push:
+    tags:
+      - 'v*' # The pipeline triggers automatically when a new version tag (e.g., v1.0.0) is pushed
+
+jobs:
+  build:
+    name: Cross-Compile Binary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Build for both standard x86_64 architecture and ARM64 (aarch64) platforms
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            arch_name: x64
+          - target: aarch64-unknown-linux-gnu
+            arch_name: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Required to link the ARM64 binary properly when compiling on a standard x86_64 GitHub runner
+      - name: Install cross-compilation linkers (ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build Release Binary
+        run: |
+          # Inject the correct linker variable if cross-compiling for ARM64 architecture
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          fi
+          # Compile only the specific target component (amneziawg-web dashboard)
+          cargo build --release --target ${{ matrix.target }} --bin amneziawg-web
+
+      - name: Rename and structure artifacts for upload
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/amneziawg-web dist/amneziawg-web-${{ matrix.arch_name }}
+
+      # Automatically attaches the compiled binaries directly to the generated GitHub Release assets
+      - name: Upload Artifacts to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/amneziawg-web-${{ matrix.arch_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
