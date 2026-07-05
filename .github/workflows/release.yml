@@ -1,9 +1,9 @@
-name: Build and Release AmneziaWG Web
+name: Build and Release AmneziaWG Web and Proxy
 
 on:
   push:
     tags:
-      - 'v*' # The pipeline triggers automatically when a new version tag (e.g., v1.0.1) is pushed
+      - 'v*' # Пайплайн запускается автоматически при пуше тега версии (например, v1.0.1)
 
 jobs:
   build:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Build for both standard x86_64 architecture and ARM64 (aarch64) platforms
+        # Сборка под стандартную архитектуру x86_64 и ARM64 (aarch64)
         target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
         include:
           - target: x86_64-unknown-linux-gnu
@@ -28,34 +28,54 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      # Required to link the ARM64 binary properly when compiling on a standard x86_64 GitHub runner
+      # Необходим для корректной линковки ARM64 бинарников на x86_64 раннере GitHub
       - name: Install cross-compilation linkers (ARM64)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      # Explicitly set the working directory to amneziawg-web since the repository lacks a root Cargo.toml
-      - name: Build Release Binary
+      # -------------------------------------------------------------------------
+      # СБОРКА КОМПОНЕНТОВ
+      # -------------------------------------------------------------------------
+      
+      # Сборка Веб-панели
+      - name: Build Release Binary (Web Panel)
         working-directory: amneziawg-web
         run: |
-          # Inject the correct linker variable if cross-compiling for ARM64 architecture
           if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
           fi
-          # Compile the specific dashboard target inside its subdirectory
           cargo build --release --target ${{ matrix.target }}
 
-      # Prepare and rename the binaries inside a temporary distribution folder for distinct releases
+      # Сборка Прокси-слоя (Новый шаг)
+      - name: Build Release Binary (Proxy Layer)
+        working-directory: amneziawg-proxy
+        run: |
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          fi
+          cargo build --release --target ${{ matrix.target }}
+
+      # -------------------------------------------------------------------------
+      # ПОДГОТОВКА И СТРУКТУРИРОВАНИЕ АРТИФАКТОВ
+      # -------------------------------------------------------------------------
       - name: Rename and structure artifacts for upload
         run: |
           mkdir -p dist
+          # Копируем панель
           cp amneziawg-web/target/${{ matrix.target }}/release/amneziawg-web dist/amneziawg-web-${{ matrix.arch_name }}
+          # Копируем прокси (Новый шаг)
+          cp amneziawg-proxy/target/${{ matrix.target }}/release/amneziawg-proxy dist/amneziawg-proxy-${{ matrix.arch_name }}
 
-      # Automatically attaches the compiled binaries directly to the generated GitHub Release assets
+      # -------------------------------------------------------------------------
+      # ПУБЛИКАЦИЯ В RELEASE ASSETS
+      # -------------------------------------------------------------------------
       - name: Upload Artifacts to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/amneziawg-web-${{ matrix.arch_name }}
+          files: |
+            dist/amneziawg-web-${{ matrix.arch_name }}
+            dist/amneziawg-proxy-${{ matrix.arch_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
