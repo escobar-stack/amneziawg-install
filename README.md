@@ -1,9 +1,10 @@
----
-> 🌐 **Fork Maintenance Note / Заметка по сопровождению форка**
->
-> **EN:** This is a personal fork maintained by `escobar-stack`. It is optimized for CI/CD workflow automation via GitHub Actions to cross-compile the `amneziawg-web` Rust binary for both `x86_64` and `aarch64` (ARM64) architectures, enabling lightweight, compiler-free deployment via Ansible.
->
-> **RU:** Это личный форк, поддерживаемый `escobar-stack`. Он оптимизирован для автоматизации CI/CD через GitHub Actions с целью кросс-компиляции Rust-бинарника `amneziawg-web` под архитектуры `x86_64` и `aarch64` (ARM64). Это позволяет выполнять легкий деплой через Ansible без установки компилятора на целевых хостах.
+# 🌐 Fork Maintenance Note / Заметка по сопровождению форка
+
+**EN:** This is a personal fork maintained by `escobar-stack`. It is optimized for CI/CD workflow automation via GitHub Actions to cross-compile the `amneziawg-web` Rust binary for both `x86_64` and `aarch64` (ARM64) architectures, enabling lightweight, compiler-free deployment via Ansible.
+
+**RU:** Это личный форк, поддерживаемый `escobar-stack`. Он оптимизирован для автоматизации CI/CD через GitHub Actions с целью кросс-компиляции Rust-бинарника `amneziawg-web` под архитектуры `x86_64` и `aarch64` (ARM64). Это позволяет выполнять легкий деплой через Ansible без установки компилятора на целевых хостах.
+
+***
 ---
 # AmneziaWG Installer
 
